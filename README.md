@@ -23,7 +23,7 @@ Además, incluye la instalación de dependencias populares y la configuración d
 
 ## Instalación
 
-1. Descarga el ejecutable desde el [repositorio oficial](#).
+1. Descarga el ejecutable desde el [repositorio oficial](https://github.com/Johnny1305/Reactify/releases).
 2. Ejecuta el archivo `.exe` para iniciar Reactify.
 
 > **Nota**: Reactify **no instala dependencias de terceros** como `axios`, `zustand`, o `material-ui`. Estas dependencias deberán ser instaladas manualmente si las necesitas para tu proyecto. Sin embargo, se agregarán más dependencias en futuras actualizaciones.
