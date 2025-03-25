@@ -46,7 +46,7 @@ Además, incluye la instalación de dependencias populares y la configuración d
 
 ## Funcionalidades pendientes para futuras actualizaciones
 
-- [ ] **Instalación automática de dependencias adicionales**:  
+- [x] **Instalación automática de dependencias adicionales**:  
   En futuras versiones, Reactify permitirá la instalación automática de dependencias de terceros (por ejemplo, `axios`, `zustand`, `material-ui`) si el usuario lo solicita durante la creación del proyecto.
 
 - [ ] **Soporte para TypeScript**:  
