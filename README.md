@@ -1,6 +1,12 @@
-# Reactify 🚀 v1.0
+# Reactify 🚀
 
-**Reactify** es una herramienta para facilitar la creación de proyectos con frameworks. Con Reactify, puedes generar proyectos de manera rápida y sencilla, configurando todo lo necesario para que empieces a desarrollar sin complicaciones. 
+<div style="display: flex; align-items: center;">
+    <img src="./logo.ico" width="50px" alt="Reactify Logo">
+    <p style="margin-left: 20px; font-size: 16px;">
+        <strong>Reactify</strong> es una herramienta para facilitar la creación de proyectos con frameworks. Con Reactify, puedes generar proyectos de manera rápida y sencilla, configurando todo lo necesario para que empieces a desarrollar sin complicaciones.
+    </p>
+</div>
+
 
 Este programa soporta la creación de proyectos con los siguientes frameworks:
 
@@ -26,7 +32,6 @@ Además, incluye la instalación de dependencias populares y la configuración d
 1. Descarga el ejecutable desde el [repositorio oficial](https://github.com/Johnny1305/Reactify/releases).
 2. Ejecuta el archivo `.exe` para iniciar Reactify.
 
-> **Nota**: Reactify **no instala dependencias de terceros** como `axios`, `zustand`, o `material-ui`. Estas dependencias deberán ser instaladas manualmente si las necesitas para tu proyecto. Sin embargo, se agregarán más dependencias en futuras actualizaciones.
 
 
 ## Cómo usar Reactify
@@ -61,7 +66,7 @@ Además, incluye la instalación de dependencias populares y la configuración d
 
 ## Contribuciones
 
-Si deseas contribuir al proyecto, ¡estás más que bienvenido! Puedes enviar un pull request o abrir un issue en el repositorio.
+Si deseas contribuir al proyecto, ¡estás más que bienvenido! Puedes enviar un pull request o abrir un issue en el repositorio. [Contribuciones](./CONTRIBUTING.md)
 
 ## Licencia
 
