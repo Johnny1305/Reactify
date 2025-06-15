@@ -54,7 +54,7 @@ Además, incluye la instalación de dependencias populares y la configuración d
 - [x] **Instalación automática de dependencias adicionales**:  
   En futuras versiones, Reactify permitirá la instalación automática de dependencias de terceros (por ejemplo, `axios`, `zustand`, `material-ui`) si el usuario lo solicita durante la creación del proyecto.
 
-- [ ] **Soporte para TypeScript**:  
+- [x] **Soporte para TypeScript**:  
   En futuras versiones, Reactify permitirá elegir entre proyectos en JavaScript o TypeScript al momento de crear el proyecto.
 
 - [ ] **Creación de proyectos con configuración personalizada**:  
