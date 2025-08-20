@@ -10,6 +10,7 @@ from plyer import notification
 from win10toast import ToastNotifier
 import requests
 import webbrowser
+import re
 
 def check_for_updates():
     try:
@@ -39,23 +40,146 @@ def check_for_updates():
     except Exception as e:
         terminal_text.insert(tk.END, f"❌ Error al comprobar actualizaciones: {e}\n")
 
-def run_command(command, cwd=None):
+def run_command_interactive(command, cwd=None, responses=None):
     try:
-        process = subprocess.Popen(command, shell=True, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-
-        for line in process.stdout:
-            terminal_text.insert(tk.END, line)
+        terminal_text.insert(tk.END, f"🔄 Ejecutando comando interactivo: {command}\n")
+        
+        process = subprocess.Popen(
+            command,
+            shell=True,
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            universal_newlines=True
+        )
+        
+        response_index = 0
+        output_buffer = ""
+        
+        while True:
+            char = process.stdout.read(1)
+            if not char:
+                if process.poll() is not None:
+                    break
+                continue
+                
+            output_buffer += char
+            
+            terminal_text.insert(tk.END, char)
             terminal_text.see(tk.END)
             terminal_text.update_idletasks()
+            
+            if responses and response_index < len(responses):
+                if "Would you like to use TypeScript?" in output_buffer:
+                    response = responses[response_index]
+                    process.stdin.write(response + "\n")
+                    process.stdin.flush()
+                    output_buffer = ""
+                    response_index += 1
+                elif "Would you like to use Turbopack?" in output_buffer:
+                    process.stdin.write("n\n")
+                    process.stdin.flush()
+                    output_buffer = ""
+                    response_index += 1
+                elif "Would you like to use ESLint?" in output_buffer:
+                    process.stdin.write("y\n")
+                    process.stdin.flush()
+                    output_buffer = ""
+                    response_index += 1
+                elif "Would you like to use Tailwind CSS?" in output_buffer:
+                    process.stdin.write("y\n")
+                    process.stdin.flush()
+                    output_buffer = ""
+                    response_index += 1
+                elif "Would you like your code inside a" in output_buffer and "directory?" in output_buffer:
+                    process.stdin.write("y\n")
+                    process.stdin.flush()
+                    output_buffer = ""
+                    response_index += 1
+                elif "Would you like to use App Router?" in output_buffer:
+                    process.stdin.write("y\n")
+                    process.stdin.flush()
+                    output_buffer = ""
+                    response_index += 1
+                elif "Would you like to use Turbopack for" in output_buffer:
+                    process.stdin.write("n\n")
+                    process.stdin.flush()
+                    output_buffer = ""
+                    response_index += 1
+                elif "Would you like to customize the import alias" in output_buffer:
+                    process.stdin.write("n\n")
+                    process.stdin.flush()
+                    output_buffer = ""
+                    response_index += 1
+        
+        process.wait()
+        return process.returncode == 0
+        
+    except Exception as e:
+        terminal_text.insert(tk.END, f"❌ Error en comando interactivo: {e}\n")
+        return False
 
-        for line in process.stderr:
-            terminal_text.insert(tk.END, f"❌ {line}")
-            terminal_text.see(tk.END)
-            terminal_text.update_idletasks()
+def run_command(command, cwd=None, auto_confirm=True):
+    try:
+        if auto_confirm and command.strip().startswith('npx'):
+            command = f"echo y | {command}"
+        
+        process = subprocess.Popen(
+            command, 
+            shell=True, 
+            cwd=cwd, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True,
+            stdin=subprocess.PIPE
+        )
+
+        if auto_confirm:
+            try:
+                process.stdin.write('y\n')
+                process.stdin.flush()
+            except:
+                pass
+
+        stdout_output = []
+        stderr_output = []
+
+        while True:
+            output = process.stdout.readline()
+            error = process.stderr.readline()
+            
+            if output:
+                terminal_text.insert(tk.END, output)
+                stdout_output.append(output)
+                terminal_text.see(tk.END)
+                terminal_text.update_idletasks()
+            
+            if error:
+                if "Need to install" not in error and "Ok to proceed" not in error:
+                    terminal_text.insert(tk.END, f"❌ {error}")
+                    stderr_output.append(error)
+                else:
+                    terminal_text.insert(tk.END, error)
+                    stderr_output.append(error)
+                terminal_text.see(tk.END)
+                terminal_text.update_idletasks()
+            
+            if output == '' and error == '' and process.poll() is not None:
+                break
 
         process.wait()
+        if process.returncode != 0:
+            terminal_text.insert(tk.END, f"❌ El comando falló con código de retorno {process.returncode}\n")
+            terminal_text.insert(tk.END, f"Salida estándar: {''.join(stdout_output)}\n")
+            terminal_text.insert(tk.END, f"Salida de error: {''.join(stderr_output)}\n")
+        return process.returncode == 0
+        
     except Exception as e:
-        terminal_text.insert(tk.END, f"Error: {e}\n")
+        terminal_text.insert(tk.END, f"❌ Error ejecutando comando: {e}\n")
+        return False
 
 def get_versions_async(package_name, callback):
     def worker():
@@ -92,112 +216,206 @@ def search_packages_realtime(query, callback):
                     })
                 callback(packages)
             else:
+                terminal_text.insert(tk.END, f"❌ Error en búsqueda npm: Código de estado {response.status_code}\n")
                 callback([])
         except Exception as e:
-            print(f"Error searching packages: {e}")
+            terminal_text.insert(tk.END, f"❌ Error buscando paquetes: {e}\n")
             callback([])
 
     threading.Thread(target=worker, daemon=True).start()
 
 def install_dependencies(project_path, framework):
-    os.chdir(project_path)
+    original_cwd = os.getcwd()
+    try:
+        os.chdir(project_path)
+        terminal_text.insert(tk.END, f"📁 Cambiando a directorio: {project_path}\n")
 
-    dependencies = [
-        "react-icons", "axios", "dotenv",
-        "react-toastify", "clsx", "framer-motion",
-        "@mui/material @emotion/react @emotion/styled"
-    ]
-
-    dev_dependencies = [
-        "eslint", "prettier", "eslint-config-prettier",
-        "eslint-plugin-react", "eslint-plugin-react-hooks"
-    ]
-
-    update_progress(40)
-    run_command(f"npm install {' '.join(dependencies)}")
-    
-    update_progress(60)
-    run_command(f"npm install -D {' '.join(dev_dependencies)}")
-
-    selected_extras = []
-    
-    for dep in extra_dependencies:
-        if extra_dependencies[dep].get():
-            version = version_vars[dep].get() if dep in version_vars and version_vars[dep].get() else "latest"
-            selected_extras.append(f"{dep}@{version}")
-    
-    for dep in custom_dependencies:
-        if custom_dependencies[dep]["enabled"].get():
-            version = custom_dependencies[dep]["version"].get() if custom_dependencies[dep]["version"].get() else "latest"
-            selected_extras.append(f"{dep}@{version}")
-
-    if selected_extras:
-        terminal_text.insert(tk.END, f"📦 Instalando: {', '.join(selected_extras)}...\n")
-        run_command(f"npm install {' '.join(selected_extras)}")
-
-    update_progress(80)
-    if framework == "Next.js":
-        run_command("npm install next-auth @next/font")
-
-    update_progress(100)
-    terminal_text.insert(tk.END, "✅ Instalación completada.\n")
-    
-    if use_typescript.get():
-        terminal_text.insert(tk.END, "🛠️ Configurando TypeScript...\n")
-        ts_dev_dependencies = [
-            "typescript", "@types/react", "@types/react-dom"
+        dependencies = [
+            "react-icons", "axios", "dotenv",
+            "react-toastify", "clsx", "framer-motion",
+            "@mui/material @emotion/react @emotion/styled"
         ]
-        run_command(f"npm install -D {' '.join(ts_dev_dependencies)}")
+
+        dev_dependencies = [
+            "eslint", "prettier", "eslint-config-prettier",
+            "eslint-plugin-react", "eslint-plugin-react-hooks"
+        ]
+
+        update_progress(40)
+        terminal_text.insert(tk.END, f"📦 Instalando dependencias básicas...\n")
+        run_command(f"npm install {' '.join(dependencies)}", cwd=project_path, auto_confirm=False)
+        
+        update_progress(60)
+        terminal_text.insert(tk.END, f"🔧 Instalando dependencias de desarrollo...\n")
+        run_command(f"npm install -D {' '.join(dev_dependencies)}", cwd=project_path, auto_confirm=False)
+
+        selected_extras = []
+        
+        for dep in extra_dependencies:
+            if extra_dependencies[dep].get():
+                version = version_vars[dep].get() if dep in version_vars and version_vars[dep].get() else "latest"
+                selected_extras.append(f"{dep}@{version}")
+        
+        for dep in custom_dependencies:
+            if custom_dependencies[dep]["enabled"].get():
+                version = custom_dependencies[dep]["version"].get() if custom_dependencies[dep]["version"].get() else "latest"
+                selected_extras.append(f"{dep}@{version}")
+
+        if selected_extras:
+            terminal_text.insert(tk.END, f"📦 Instalando dependencias adicionales: {', '.join(selected_extras)}...\n")
+            run_command(f"npm install {' '.join(selected_extras)}", cwd=project_path, auto_confirm=False)
+
+        update_progress(80)
+        if framework == "Next.js":
+            terminal_text.insert(tk.END, f"⚡ Instalando dependencias específicas de Next.js...\n")
+            run_command("npm install next-auth @next/font", cwd=project_path, auto_confirm=False)
+
+        if use_typescript.get():
+            terminal_text.insert(tk.END, "🛠️ Configurando dependencias adicionales de TypeScript...\n")
+            ts_dev_dependencies = []
+            if framework not in ["React (Vite)", "Next.js"]:
+                ts_dev_dependencies = ["typescript", "@types/react", "@types/react-dom"]
+            if ts_dev_dependencies:
+                run_command(f"npm install -D {' '.join(ts_dev_dependencies)}", cwd=project_path, auto_confirm=False)
+
+        update_progress(100)
+        terminal_text.insert(tk.END, "✅ Instalación de dependencias completada.\n")
+        
+    finally:
+        os.chdir(original_cwd)
 
 def update_progress(value):
     progress_bar.set(value / 100)
     root.update_idletasks()
 
+def check_typescript_installed():
+    try:
+        result = subprocess.run("tsc --version", shell=True, capture_output=True, text=True)
+        if result.returncode == 0:
+            terminal_text.insert(tk.END, f"✅ TypeScript detectado: {result.stdout.strip()}\n")
+            return True
+        else:
+            terminal_text.insert(tk.END, "⚠️ TypeScript no está instalado globalmente. Instalando...\n")
+            install_cmd = "npm install -g typescript"
+            terminal_text.insert(tk.END, f"🔄 Ejecutando: {install_cmd}\n")
+            success = run_command(install_cmd, auto_confirm=True)
+            if success:
+                result = subprocess.run("tsc --version", shell=True, capture_output=True, text=True)
+                if result.returncode == 0:
+                    terminal_text.insert(tk.END, f"✅ TypeScript instalado correctamente: {result.stdout.strip()}\n")
+                    return True
+                else:
+                    terminal_text.insert(tk.END, "❌ Error: No se pudo verificar la instalación de TypeScript.\n")
+                    return False
+            else:
+                terminal_text.insert(tk.END, "❌ Error al instalar TypeScript.\n")
+                return False
+    except Exception as e:
+        terminal_text.insert(tk.END, f"❌ Error al verificar o instalar TypeScript: {e}\n")
+        return False
+
 def create_project():
     def worker():
         project_name = entry_project_name.get().strip().lower().replace(" ", "-")
-        project_path = entry_directory.get()
+        project_path = entry_directory.get().strip()
 
         if not project_name or not project_path:
             messagebox.showwarning("Advertencia", "Debes completar todos los campos.")
             return
 
-        full_path = os.path.join(project_path, project_name)
-        framework = framework_var.get()
-        terminal_text.insert(tk.END, f"📦 Creando {project_name}...\n")
-        update_progress(10)
-
-        if framework == "React (Vite)":
-            template = "react-ts" if use_typescript.get() else "react"
-            run_command(f"npm create vite@latest {full_path} -- --template {template}")
-        elif framework == "Next.js":
-            run_command(f"npx create-next-app@latest {full_path}{' --typescript' if use_typescript.get() else ''}")
-        elif framework == "React (CRA)":
-            run_command(f"npx create-react-app {full_path}{' --template typescript' if use_typescript.get() else ''}")
-        else:
-            messagebox.showerror("Error", "Selecciona un framework.")
+        if not re.match("^[a-z0-9-]+$", project_name):
+            messagebox.showerror("Error", "El nombre del proyecto solo puede contener letras, números y guiones.")
             return
 
-        update_progress(30)
-        install_dependencies(full_path, framework)
+        if not os.path.isabs(project_path):
+            project_path = os.path.abspath(project_path)
+        
+        full_path = os.path.join(project_path, project_name)
+        terminal_text.insert(tk.END, f"🎯 Ruta completa del proyecto: {full_path}\n")
+        
+        if os.path.exists(full_path):
+            result = messagebox.askyesno(
+                "Directorio existe", 
+                f"El directorio '{full_path}' ya existe. ¿Deseas continuar? Esto podría sobrescribir archivos existentes."
+            )
+            if not result:
+                return
 
-        update_progress(100)
-        terminal_text.insert(tk.END, f"✅ Proyecto {project_name} creado.\n")
+        framework = framework_var.get()
+        terminal_text.insert(tk.END, f"📦 Creando proyecto '{project_name}' con {framework}...\n")
+        update_progress(10)
 
-        notification.notify(
-            title="Proyecto Creado",
-            message=f"{project_name} se ha creado.",
-            timeout=10
-        )
+        if use_typescript.get() and not check_typescript_installed():
+            messagebox.showerror("Error", "No se pudo instalar TypeScript. Por favor, instálalo manualmente con 'npm install -g typescript' e intenta de nuevo.")
+            return
 
-        os.startfile(full_path) if os.name == "nt" else subprocess.Popen(["xdg-open", full_path])
+        try:
+            if framework == "React (Vite)":
+                template = "react-ts" if use_typescript.get() else "react"
+                cmd = f'npx create-vite@latest "{project_name}" --template {template}'
+                terminal_text.insert(tk.END, f"🔨 Ejecutando: {cmd}\n")
+                success = run_command(cmd, cwd=project_path)
+                if not success:
+                    terminal_text.insert(tk.END, "❌ Error al crear el proyecto con Vite\n")
+                    return
+
+            elif framework == "Next.js":
+                ts_flag = "--typescript" if use_typescript.get() else "--javascript"
+                cmd = f'npx create-next-app@latest "{project_name}" {ts_flag} --eslint --tailwind --src-dir --app --no-turbopack --import-alias "@/*" --use-npm'
+                terminal_text.insert(tk.END, f"🔨 Creando proyecto Next.js: {cmd}\n")
+                success = run_command(cmd, cwd=project_path, auto_confirm=True)
+                if not success:
+                    terminal_text.insert(tk.END, "❌ Error al crear el proyecto con Next.js\n")
+                    return
+
+            elif framework == "React (CRA)":
+                ts_flag = " --template typescript" if use_typescript.get() else ""
+                cmd = f'npx create-react-app@latest "{project_name}"{ts_flag}'
+                terminal_text.insert(tk.END, f"🔨 Ejecutando: {cmd}\n")
+                success = run_command(cmd, cwd=project_path)
+                if not success:
+                    terminal_text.insert(tk.END, "❌ Error al crear el proyecto con Create React App\n")
+                    return
+
+            else:
+                messagebox.showerror("Error", "Selecciona un framework.")
+                return
+
+            if not os.path.exists(full_path):
+                terminal_text.insert(tk.END, f"❌ Error: El proyecto no se creó correctamente en {full_path}\n")
+                return
+
+            update_progress(30)
+            terminal_text.insert(tk.END, f"✅ Proyecto base creado exitosamente.\n")
+            
+            install_dependencies(full_path, framework)
+
+            terminal_text.insert(tk.END, f"🎉 ¡Proyecto '{project_name}' creado completamente!\n")
+
+            notification.notify(
+                title="Proyecto Creado",
+                message=f"{project_name} se ha creado exitosamente.",
+                timeout=10
+            )
+
+            if os.name == "nt":
+                os.startfile(full_path)
+            else:
+                subprocess.Popen(["xdg-open" if os.uname().sysname != "Darwin" else "open", full_path])
+
+        except Exception as e:
+            terminal_text.insert(tk.END, f"❌ Error durante la creación: {str(e)}\n")
+            messagebox.showerror("Error", f"Error al crear el proyecto: {str(e)}")
+        finally:
+            update_progress(0)
 
     threading.Thread(target=worker, daemon=True).start()
 
 def select_directory():
     directory = filedialog.askdirectory()
-    entry_directory.delete(0, tk.END)
-    entry_directory.insert(0, directory)
+    if directory:
+        entry_directory.delete(0, tk.END)
+        entry_directory.insert(0, directory)
 
 def on_search_change(event=None):
     query = search_entry.get()
@@ -216,7 +434,6 @@ def display_search_results(packages):
         hide_search_results()
         return
     
-    # Calcular posición relativa al campo de búsqueda
     search_x = search_container.winfo_x() + dependencies_frame.winfo_x() + top_frame.winfo_x()
     search_y = search_container.winfo_y() + search_container.winfo_height() + dependencies_frame.winfo_y() + top_frame.winfo_y()
     
@@ -291,32 +508,23 @@ def add_custom_dependency(dep_name):
         "dropdown": None
     }
     
-    # Crear el frame para la nueva dependencia
     row_frame = ctk.CTkFrame(dependencies_frame)
     
-    # Insertar AL PRINCIPIO de la lista, después del separador
-    # Primero obtenemos todos los widgets hijos
     children = dependencies_frame.winfo_children()
     
-    # Encontrar la posición del separador
     separator_index = -1
     for i, child in enumerate(children):
         if hasattr(child, '_name') and 'separator' in str(child):
             separator_index = i
             break
     
-    # Si encontramos el separador, insertar después de él
     if separator_index != -1:
-        # Desempacar el widget
         row_frame.pack(fill="x", padx=5, pady=2)
-        # Mover el widget al principio (después del separador)
         row_frame.pack_forget()
         row_frame.pack(fill="x", padx=5, pady=2, after=children[separator_index])
     else:
-        # Si no hay separador, añadir al principio
         row_frame.pack(fill="x", padx=5, pady=2)
         row_frame.pack_forget()
-        # Obtener el primer elemento que sea un checkbox de dependencia
         first_dep_widget = None
         for child in children:
             if isinstance(child, ctk.CTkFrame) and any(isinstance(grandchild, ctk.CTkCheckBox) for grandchild in child.winfo_children()):
@@ -330,13 +538,12 @@ def add_custom_dependency(dep_name):
     
     custom_dependencies[dep_name]["frame"] = row_frame
     
-    # Crear checkbox con estilo diferenciado para dependencias personalizadas
     checkbox = ctk.CTkCheckBox(
         row_frame, 
         text=f"🔍 {dep_name} (personalizada)", 
         variable=custom_dependencies[dep_name]["enabled"],
         command=lambda: toggle_custom_version_dropdown(dep_name),
-        text_color=("#00D4AA", "#00D4AA")  # Color especial para dependencias personalizadas
+        text_color=("#00D4AA", "#00D4AA")
     )
     checkbox.pack(side="left")
     
@@ -393,7 +600,10 @@ def show_info():
     info_window = ctk.CTkToplevel(root)
     info_window.title("Información del Programa")
     info_window.geometry("400x300")
-    info_window.iconbitmap(r"C:\Users\jonyp\Desktop\Reactify\logo.ico")
+    try:
+        info_window.iconbitmap("logo.ico")
+    except:
+        pass
     info_window.resizable(False, False)
     info_window.attributes("-topmost", True)
     info_window.protocol("WM_DELETE_WINDOW", lambda: close_info_window(info_window))
@@ -442,7 +652,10 @@ def open_donation_page():
     donation_window.title("Apoya el Proyecto 💖")
     donation_window.geometry("500x400")
     donation_window.resizable(False, False)
-    donation_window.iconbitmap(r"C:\Users\jonyp\Desktop\Reactify\logo.ico")
+    try:
+        donation_window.iconbitmap("logo.ico")
+    except:
+        pass
     donation_window.attributes("-topmost", True)
     donation_window.protocol("WM_DELETE_WINDOW", lambda: close_info_window(donation_window))
 
@@ -501,7 +714,8 @@ def show_tooltip(event):
 
 def hide_tooltip(event):
     global tooltip
-    tooltip.destroy()
+    if 'tooltip' in globals():
+        tooltip.destroy()
 
 def on_click_outside(event):
     widget_name = str(event.widget)
@@ -533,7 +747,10 @@ ctk.set_default_color_theme("blue")
 root = ctk.CTk()
 root.title("Reactify 1.3")
 root.geometry("1200x700")
-root.iconbitmap(r"C:\Users\jonyp\Desktop\Reactify\logo.ico")
+try:
+    root.iconbitmap("logo.ico")
+except:
+    pass
 
 root.bind("<Button-1>", on_click_outside)
 
@@ -543,7 +760,6 @@ x_position = int((screen_width - 1200) / 2)
 y_position = int((screen_height - 700) / 2)
 root.geometry(f"1200x700+{x_position}+{y_position}")
 
-# Botones de información y donación (posición fija)
 btn_info = ctk.CTkButton(root, text="ℹ", command=show_info, width=30, height=30)
 btn_info.place(x=10, y=10)
 
@@ -553,21 +769,17 @@ btn_donate.place(x=50, y=10)
 btn_donate.bind("<Enter>", show_tooltip)
 btn_donate.bind("<Leave>", hide_tooltip)
 
-# Título principal
 title_label = ctk.CTkLabel(root, text="Reactify🚀", font=("Arial", 20, "bold"))
 title_label.pack(pady=10)
 
-# NUEVO LAYOUT: Frame principal dividido en dos secciones
 top_frame = ctk.CTkFrame(root)
 top_frame.pack(fill="both", expand=True, padx=10, pady=10)
 
-# ===== LADO IZQUIERDO: DEPENDENCIAS =====
 dependencies_frame = ctk.CTkScrollableFrame(top_frame, width=400)
 dependencies_frame.pack(side="left", fill="both", expand=False, padx=(5, 10), pady=5)
 
 ctk.CTkLabel(dependencies_frame, text="⚙️ Dependencias Opcionales", font=("Arial", 16, "bold")).pack(pady=5)
 
-# Sección de búsqueda
 search_container = ctk.CTkFrame(dependencies_frame)
 search_container.pack(fill="x", padx=5, pady=10)
 
@@ -582,27 +794,22 @@ search_entry.pack(padx=10, pady=5)
 
 search_entry.bind('<KeyRelease>', on_search_change)
 
-# Frame para resultados de búsqueda (flotante)
 search_results_frame = ctk.CTkFrame(root, width=380, height=200)
 
-
-# Separador entre secciones
 separator = ctk.CTkFrame(dependencies_frame, height=2, fg_color="gray")
 separator.pack(fill="x", padx=5, pady=15)
 
-# Variables para dependencias
 extra_dependencies = {}
 version_vars = {}
 dropdown_menus = {}
 custom_dependencies = {}
 
-# Lista de dependencias predefinidas
 dependencies_list = [
     "tailwindcss", "daisyui", "react-router-dom", "redux",
     "formik", "yup", "react-hook-form", "lodash",
     "recoil", "react-query", "zustand", "sass",
     "bootstrap", "ant-design", "react-select",
-    "dayjs", "date-fns", "react-spring", "react-transition-group",
+    "dayjs", "date-fns", "react spring", "react-transition-group",
     "react-intersection-observer"
 ]
 
@@ -614,19 +821,15 @@ for dep in dependencies_list:
 
     ctk.CTkCheckBox(row_frame, text=dep, variable=extra_dependencies[dep], command=lambda d=dep, f=row_frame: toggle_version_dropdown(d, f)).pack(side="left")
 
-# ===== LADO DERECHO: CONFIGURACIÓN DEL PROYECTO =====
 config_frame = ctk.CTkFrame(top_frame, width=500)
 config_frame.pack(side="right", fill="both", expand=True, padx=(10, 5), pady=5)
 
-# Título de configuración
 ctk.CTkLabel(config_frame, text="🔧 Configuración del Proyecto", font=("Arial", 16, "bold")).pack(pady=15)
 
-# Nombre del proyecto
 ctk.CTkLabel(config_frame, text="Nombre del Proyecto:", font=("Arial", 12)).pack(pady=(10, 5))
 entry_project_name = ctk.CTkEntry(config_frame, width=400)
 entry_project_name.pack(pady=5)
 
-# Selección de directorio
 ctk.CTkLabel(config_frame, text="Seleccionar Carpeta:", font=("Arial", 12)).pack(pady=(15, 5))
 frame_directory = ctk.CTkFrame(config_frame)
 frame_directory.pack(pady=5)
@@ -635,28 +838,23 @@ entry_directory = ctk.CTkEntry(frame_directory, width=340)
 entry_directory.pack(side="left", padx=5)
 ctk.CTkButton(frame_directory, text="📂", width=40, command=select_directory).pack(side="left")
 
-# Framework selection
 ctk.CTkLabel(config_frame, text="Selecciona el Framework:", font=("Arial", 12)).pack(pady=(15, 5))
 framework_var = ctk.StringVar(value="React (Vite)")
 framework_dropdown = ctk.CTkComboBox(config_frame, values=["React (Vite)", "Next.js", "React (CRA)"], variable=framework_var, width=150)
 framework_dropdown.pack(pady=5)
 framework_dropdown.configure(state="readonly")
 
-# TypeScript checkbox
 use_typescript = tk.BooleanVar()
 checkbox_typescript = ctk.CTkCheckBox(config_frame, text="Usar TypeScript", variable=use_typescript)
 checkbox_typescript.pack(pady=15)
 
-# Botón crear proyecto
 create_button = ctk.CTkButton(config_frame, text="Crear Proyecto", command=create_project, height=40, font=("Arial", 14, "bold"))
 create_button.pack(pady=20)
 
-# Barra de progreso
 progress_bar = ctk.CTkProgressBar(config_frame, width=400)
 progress_bar.set(0)
 progress_bar.pack(pady=10)
 
-# ===== PARTE INFERIOR: TERMINAL =====
 terminal_frame = ctk.CTkFrame(root, height=200)
 terminal_frame.pack(fill="x", padx=10, pady=(0, 10))
 
@@ -670,6 +868,5 @@ terminal_text = tk.Text(
 )
 terminal_text.pack(fill="both", expand=True, padx=5, pady=(0, 5))
 
-# Verificar actualizaciones al iniciar
 check_for_updates()
 root.mainloop()
