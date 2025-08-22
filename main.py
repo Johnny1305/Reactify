@@ -19,7 +19,7 @@ def check_for_updates():
         response.raise_for_status()
         
         latest_version = response.json().get("tag_name")
-        current_version = "1.3"
+        current_version = "1.3.1"
         
         latest_version = latest_version.lstrip("v")
         current_version = current_version.lstrip("v")
@@ -614,7 +614,7 @@ def show_info():
     y_position = int((screen_height - 300) / 2)
     info_window.geometry(f"400x300+{x_position}+{y_position}")
 
-    label_info_title = ctk.CTkLabel(info_window, text="Reactify 💻 1.3", font=("Arial", 16, "bold"))
+    label_info_title = ctk.CTkLabel(info_window, text="Reactify 💻 1.3.1", font=("Arial", 16, "bold"))
     label_info_title.pack(pady=10)
 
     label_info_text = ctk.CTkLabel(info_window, text=(
@@ -745,7 +745,7 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 root = ctk.CTk()
-root.title("Reactify 1.3")
+root.title("Reactify 1.3.1")
 root.geometry("1200x700")
 try:
     root.iconbitmap("logo.ico")
