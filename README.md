@@ -2,7 +2,9 @@
 
 <div align="center">
 
-![Reactify Logo](https://media.licdn.com/dms/image/v2/D4D22AQHtU82_E_mb_Q/feedshare-shrink_2048_1536/B4DZjDT_xdH0As-/0/1755623456664?e=1758758400&v=beta&t=88RGh9AJzmr7Tr19qAzt82Stx5sqYw18O5H-cRSAUzA)
+<p align="center">
+  <img src="logo.ico" alt="Reactify Logo" width="50">
+</p>
 
 **Una herramienta GUI intuitiva para crear proyectos React con configuración automática**
 
