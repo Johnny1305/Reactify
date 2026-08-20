@@ -1,0 +1,73 @@
+name: Daily health check
+
+on:
+  schedule:
+    - cron: '0 8 * * *'   # todos los días a las 08:00 UTC
+  workflow_dispatch:        # también puedes lanzarlo manualmente desde la pestaña Actions
+  push:
+    paths:
+      - '.github/workflows/daily-check.yml'   # se ejecuta nada más subir/editar este archivo
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install analysis tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 bandit pip-audit
+
+      - name: Run bug/style check (flake8)
+        id: flake8
+        run: |
+          flake8 . --exclude=.git,__pycache__ --max-line-length=120 > flake8_report.txt 2>&1 || true
+          BUG_COUNT=$(wc -l < flake8_report.txt)
+          echo "count=$BUG_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Run security check (bandit)
+        id: bandit
+        run: |
+          bandit -r . -x .git > bandit_report.txt 2>&1 || true
+          SEC_COUNT=$(grep -c "Issue:" bandit_report.txt || true)
+          echo "count=$SEC_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Check dependency vulnerabilities (pip-audit)
+        id: audit
+        run: |
+          if [ -f requirements.txt ]; then
+            pip-audit -r requirements.txt > audit_report.txt 2>&1 || true
+          else
+            echo "No requirements.txt encontrado" > audit_report.txt
+          fi
+          VULN_COUNT=$(grep -c "found" audit_report.txt || true)
+          echo "count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Update log
+        run: |
+          mkdir -p .healthlog
+          {
+            echo "## Chequeo del $(date -u +'%Y-%m-%d %H:%M UTC')"
+            echo "- Bugs/estilo (flake8): ${{ steps.flake8.outputs.count }} avisos"
+            echo "- Seguridad (bandit): ${{ steps.bandit.outputs.count }} hallazgos"
+            echo "- Vulnerabilidades de dependencias (pip-audit): ${{ steps.audit.outputs.count }}"
+            echo ""
+          } >> .healthlog/log.md
+
+      - name: Commit and push if there are changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .healthlog/log.md
+          git commit -m "chore: chequeo diario $(date -u +'%Y-%m-%d')" || echo "Nada que commitear"
+          git push
