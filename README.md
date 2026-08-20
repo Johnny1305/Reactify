@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://www.python.org/downloads/)
 [![CustomTkinter](https://img.shields.io/badge/GUI-CustomTkinter-green.svg)](https://github.com/TomSchimansky/CustomTkinter)
-[![Version](https://img.shields.io/badge/Version-1.2-orange.svg)](https://github.com/Johnny1305/Reactify/releases)
+[![Version](https://img.shields.io/badge/Version-1.3.1-orange.svg)](https://github.com/Johnny1305/Reactify/releases)
 
 [🐛 Reportar Bug](https://github.com/Johnny1305/Reactify/issues) • [💡 Solicitar Feature](https://github.com/Johnny1305/Reactify/issues)
 
