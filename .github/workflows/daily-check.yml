@@ -62,6 +62,27 @@ jobs:
             echo "- Seguridad (bandit): ${{ steps.bandit.outputs.count }} hallazgos"
             echo "- Vulnerabilidades de dependencias (pip-audit): ${{ steps.audit.outputs.count }}"
             echo ""
+            echo "<details><summary>Ver detalle de flake8</summary>"
+            echo ""
+            echo '```'
+            cat flake8_report.txt
+            echo '```'
+            echo "</details>"
+            echo ""
+            echo "<details><summary>Ver detalle de bandit</summary>"
+            echo ""
+            echo '```'
+            cat bandit_report.txt
+            echo '```'
+            echo "</details>"
+            echo ""
+            echo "<details><summary>Ver detalle de pip-audit</summary>"
+            echo ""
+            echo '```'
+            cat audit_report.txt
+            echo '```'
+            echo "</details>"
+            echo ""
           } >> .healthlog/log.md
 
       - name: Commit and push if there are changes
