@@ -66,8 +66,8 @@ jobs:
 
       - name: Commit and push if there are changes
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "Johnny1305"
+          git config user.email "88325745+Johnny1305@users.noreply.github.com"
           git add .healthlog/log.md
           git commit -m "chore: chequeo diario $(date -u +'%Y-%m-%d')" || echo "Nada que commitear"
           git push
