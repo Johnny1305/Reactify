@@ -1032,3 +1032,150 @@ No requirements.txt encontrado
 ```
 </details>
 
+## Chequeo del 2026-08-24 08:50 UTC
+- Bugs/estilo (flake8): 1 avisos
+- Seguridad (bandit): 6 hallazgos
+- Vulnerabilidades de dependencias (pip-audit): 0
+
+<details><summary>Ver detalle de flake8</summary>
+
+```
+./main.py:964:16: W292 no newline at end of file
+```
+</details>
+
+<details><summary>Ver detalle de bandit</summary>
+
+```
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.11.16
+[manager]	WARNING	Test in comment: abre is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: el is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: explorador is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: de is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: archivos is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: no is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: ejecuta is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: input is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: externo is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: lista is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: fija is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: sin is not a test name or id, ignoring
+[manager]	WARNING	Test in comment: shell is not a test name or id, ignoring
+Run started:2026-08-24 08:50:15.778951+00:00
+
+Test results:
+>> Issue: [B404:blacklist] Consider possible security implications associated with the subprocess module.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/blacklists/blacklist_imports.html#b404-import-subprocess
+   Location: ./main.py:5:0
+4	import shlex
+5	import subprocess
+6	import threading
+
+--------------------------------------------------
+>> Issue: [B602:subprocess_popen_with_shell_equals_true] subprocess call with shell=True identified, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b602_subprocess_popen_with_shell_equals_true.html
+   Location: ./main.py:62:18
+61	            command,
+62	            shell=True,
+63	            cwd=cwd,
+64	            stdout=subprocess.PIPE,
+65	            stderr=subprocess.STDOUT,
+66	            stdin=subprocess.PIPE,
+67	            text=True,
+68	            bufsize=1,
+69	            universal_newlines=True
+70	        )
+71	
+72	        response_index = 0
+73	        output_buffer = ""
+
+--------------------------------------------------
+>> Issue: [B602:subprocess_popen_with_shell_equals_true] subprocess call with shell=True identified, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b602_subprocess_popen_with_shell_equals_true.html
+   Location: ./main.py:146:18
+145	            command,
+146	            shell=True,
+147	            cwd=cwd,
+148	            stdout=subprocess.PIPE,
+149	            stderr=subprocess.PIPE,
+150	            text=True,
+151	            stdin=subprocess.PIPE
+152	        )
+153	
+154	        if auto_confirm:
+155	            try:
+
+--------------------------------------------------
+>> Issue: [B602:subprocess_popen_with_shell_equals_true] subprocess call with shell=True identified, security issue.
+   Severity: High   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b602_subprocess_popen_with_shell_equals_true.html
+   Location: ./main.py:207:21
+206	                f"npm view {shlex.quote(package_name)} versions --json",
+207	                shell=True, capture_output=True, text=True, timeout=30
+208	            )
+209	            versions = json.loads(result.stdout)
+210	            callback(versions[-10:] if len(versions) > 15 else versions)
+211	        except Exception:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: ./main.py:329:17
+328	    try:
+329	        result = subprocess.run(shlex.split("tsc --version"), capture_output=True, text=True, timeout=15)
+330	        if result.returncode == 0:
+
+--------------------------------------------------
+>> Issue: [B603:subprocess_without_shell_equals_true] subprocess call - check for execution of untrusted input.
+   Severity: Low   Confidence: High
+   CWE: CWE-78 (https://cwe.mitre.org/data/definitions/78.html)
+   More Info: https://bandit.readthedocs.io/en/1.9.4/plugins/b603_subprocess_without_shell_equals_true.html
+   Location: ./main.py:339:25
+338	            if success:
+339	                result = subprocess.run(
+340	                    shlex.split("tsc --version"), capture_output=True, text=True, timeout=15
+341	                )
+342	                if result.returncode == 0:
+
+--------------------------------------------------
+
+Code scanned:
+	Total lines of code: 771
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 2
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 3
+		Medium: 0
+		High: 3
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 0
+		Medium: 0
+		High: 6
+Files skipped (0):
+```
+</details>
+
+<details><summary>Ver detalle de pip-audit</summary>
+
+```
+No requirements.txt encontrado
+```
+</details>
+
